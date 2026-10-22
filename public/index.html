@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GCP Express & PostgreSQL API Tester</title>
+  <meta name="description" content="Express API tester that invokes /testme and records the time of day in a PostgreSQL database with real-time UI display.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Outfit:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="background-glow top-left"></div>
+  <div class="background-glow bottom-right"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-badge">
+        <span class="badge-dot"></span>
+        <span class="badge-text" id="server-status">Connecting to Express API...</span>
+      </div>
+      <h1 class="header-title">GCP Express &amp; PostgreSQL Tester</h1>
+      <p class="header-subtitle">
+        Triggers <code>GET /testme</code> on Express, returns <em>"testing gcp"</em>, and stores the time of day in PostgreSQL.
+      </p>
+    </header>
+
+    <!-- Main Content Grid -->
+    <main class="main-content">
+      <!-- Action & Output Section -->
+      <section class="card action-card" aria-labelledby="action-heading">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 id="action-heading" class="card-title">API Execution</h2>
+            <p class="card-desc">Click below to invoke the <code>/testme</code> endpoint</p>
+          </div>
+          <div class="card-tags">
+            <span class="tag tag-method">GET</span>
+            <span class="tag tag-route">/testme</span>
+          </div>
+        </div>
+
+        <div class="action-bar">
+          <button id="btn-call-api" type="button" class="btn-primary" aria-label="Call /testme API">
+            <span class="btn-icon" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="5 3 19 12 5 21 5 3"></polygon>
+              </svg>
+            </span>
+            <span class="btn-text">Execute GET /testme</span>
+            <span class="spinner" id="btn-spinner" aria-hidden="true"></span>
+          </button>
+
+          <button id="btn-clear" type="button" class="btn-secondary" aria-label="Clear API Output">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="3 6 5 6 21 6"></polyline>
+              <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+            </svg>
+            <span>Clear Output</span>
+          </button>
+        </div>
+
+        <!-- Terminal Output Window -->
+        <div class="terminal-container">
+          <div class="terminal-bar">
+            <div class="terminal-dots" aria-hidden="true">
+              <span class="dot dot-red"></span>
+              <span class="dot dot-yellow"></span>
+              <span class="dot dot-green"></span>
+            </div>
+            <span class="terminal-label">Console Response Output</span>
+            <div class="terminal-actions">
+              <span id="response-status-badge" class="status-pill status-idle">Ready</span>
+              <button id="btn-copy-output" type="button" class="btn-icon-only" title="Copy output" aria-label="Copy output">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+
+          <div class="terminal-screen" id="terminal-screen" tabindex="0" role="region" aria-label="API response text output">
+            <pre class="terminal-code"><code id="api-output">Click "Execute GET /testme" above to call the API...</code></pre>
+          </div>
+
+          <!-- Metadata Strip -->
+          <div class="metadata-strip" id="metadata-strip" style="display: none;">
+            <div class="meta-item">
+              <span class="meta-label">HTTP Status</span>
+              <span class="meta-value" id="meta-status">200 OK</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">Latency</span>
+              <span class="meta-value" id="meta-latency">-- ms</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">PostgreSQL Stored Time</span>
+              <span class="meta-value highlight" id="meta-time">--</span>
+            </div>
+            <div class="meta-item">
+              <span class="meta-label">DB Record ID</span>
+              <span class="meta-value" id="meta-id">#--</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PostgreSQL Database Live Log -->
+      <section class="card db-card" aria-labelledby="db-heading">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h2 id="db-heading" class="card-title">PostgreSQL Database Records</h2>
+            <p class="card-desc">Live contents from table <code>testme_records</code></p>
+          </div>
+          <button id="btn-refresh-db" type="button" class="btn-ghost" title="Refresh database records" aria-label="Refresh database records">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="23 4 23 10 17 10"></polyline>
+              <polyline points="1 20 1 14 7 14"></polyline>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+            </svg>
+            <span>Refresh</span>
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="db-table" id="db-table">
+            <thead>
+              <tr>
+                <th scope="col">ID</th>
+                <th scope="col">Time of Day (TIME)</th>
+                <th scope="col">Formatted Time</th>
+                <th scope="col">Recorded At (TIMESTAMPTZ)</th>
+              </tr>
+            </thead>
+            <tbody id="db-table-body">
+              <tr>
+                <td colspan="4" class="text-center text-muted">Loading records from PostgreSQL...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer with CLI Quick Test -->
+    <footer class="app-footer">
+      <div class="curl-box">
+        <span class="curl-label">Direct cURL test:</span>
+        <code class="curl-code">curl -i http://localhost:3000/testme</code>
+        <button id="btn-copy-curl" type="button" class="btn-copy-mini" title="Copy cURL command" aria-label="Copy cURL command">
+          Copy
+        </button>
+      </div>
+      <p class="footer-credit">Built with Express.js &amp; PostgreSQL &bull; Production Ready for GCP Cloud Run</p>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
